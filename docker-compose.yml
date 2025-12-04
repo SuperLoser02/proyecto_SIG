@@ -1,0 +1,28 @@
+version: '3.9'
+services:
+  backend:
+    build: 
+      context: .
+      dockerfile: docker/dockerfile
+    volumes:
+      - ./backend:/app/backend
+    env_file: .env
+    command: ["bash", "/app/docker/inicio.sh"]
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+  
+  db:
+    image: postgres:15
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:
+      

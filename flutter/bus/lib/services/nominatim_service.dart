@@ -1,0 +1,70 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:latlong2/latlong.dart';
+import '../models/place.dart';
+
+/// Servicio para Nominatim - Geocoding API
+/// Permite buscar lugares por nombre y hacer geocoding reverso
+class NominatimService {
+  static const String _baseUrl = 'https://nominatim.openstreetmap.org';
+  
+  // Headers requeridos por Nominatim
+  static final Map<String, String> _headers = {
+    'User-Agent': 'BusApp/1.0',
+  };
+
+  /// Buscar un lugar por nombre
+  /// Ejemplo: "Cine Center Santa Cruz"
+  /// Devuelve una lista de lugares encontrados
+  static Future<List<Place>> searchPlace(String query) async {
+    if (query.isEmpty) return [];
+    
+    try {
+      final uri = Uri.parse('$_baseUrl/search').replace(
+        queryParameters: {
+          'q': query,
+          'format': 'json',
+          'addressdetails': '1',
+          'limit': '10',
+        },
+      );
+      
+      final response = await http.get(uri, headers: _headers);
+      
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data.map((json) => Place.fromNominatimJson(json)).toList();
+      }
+      
+      return [];
+    } catch (e) {
+      // Error en búsqueda Nominatim
+      return [];
+    }
+  }
+
+  /// Geocoding reverso: Convertir coordenadas → dirección
+  static Future<String?> reverseGeocode(LatLng location) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/reverse').replace(
+        queryParameters: {
+          'lat': location.latitude.toString(),
+          'lon': location.longitude.toString(),
+          'format': 'json',
+        },
+      );
+      
+      final response = await http.get(uri, headers: _headers);
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['display_name'] as String?;
+      }
+      
+      return null;
+    } catch (e) {
+      // Error en geocoding reverso
+      return null;
+    }
+  }
+}
