@@ -20,12 +20,17 @@ class NominatimService {
     if (query.isEmpty) return [];
     
     try {
+      // Bounding box para Santa Cruz, Bolivia
+      // Coordenadas aproximadas: [-63.25, -17.85, -63.10, -17.70]
       final uri = Uri.parse('$_baseUrl/search').replace(
         queryParameters: {
           'q': query,
           'format': 'json',
           'addressdetails': '1',
           'limit': '10',
+          'bounded': '1',  // Restringir estrictamente al bounding box
+          'viewbox': '-63.25,-17.85,-63.10,-17.70',  // Santa Cruz bounding box
+          'countrycodes': 'bo',  // Solo Bolivia
         },
       );
       
