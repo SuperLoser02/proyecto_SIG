@@ -132,6 +132,7 @@ class BusLineService {
   }
 
   // Encontrar la mejor ruta de micro para ir de un punto A a un punto B
+  //TODO: optimizar este método
   BusRouteRecommendation? findBestRoute({
     required LatLng from,
     required LatLng to,
