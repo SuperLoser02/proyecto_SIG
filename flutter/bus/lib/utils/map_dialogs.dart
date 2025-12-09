@@ -60,23 +60,47 @@ class MapDialogs {
   }
 
   /// Muestra un diálogo de carga mientras se buscan rutas
-  static void showLoadingDialog(BuildContext context) {
+  static void showLoadingDialog(BuildContext context, {String? message}) {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
-        child: Card(
-          child: Padding(
-            padding: EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Obteniendo tu ubicación actual...'),
-                SizedBox(height: 8),
-                Text('Buscando mejor ruta de micro...'),
-              ],
+      builder: (context) => PopScope(
+        canPop: false,
+        child: Center(
+          child: Card(
+            elevation: 8,
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(
+                    width: 50,
+                    height: 50,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 4,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    message ?? 'Buscando rutas de micro...',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Por favor espera',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

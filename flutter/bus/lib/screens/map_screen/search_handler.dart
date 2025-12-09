@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../models/place.dart';
 import '../../services/nominatim_service.dart';
@@ -9,6 +10,10 @@ class SearchHandler {
   final MapState state;
   final VoidCallback onUpdate;
   final Function(Place) onPlaceSelected;
+  
+  Timer? _debounceTimer;
+  String _lastQuery = '';
+  DateTime _lastRequestTime = DateTime.now();
 
   SearchHandler({
     required this.state,
@@ -16,22 +21,65 @@ class SearchHandler {
     required this.onPlaceSelected,
   });
 
-  /// Buscar lugares por texto
-  Future<void> searchPlaces(String query) async {
+  /// Buscar lugares por texto con debouncing
+  void searchPlaces(String query) {
+    // Cancelar búsqueda anterior
+    _debounceTimer?.cancel();
+    
     if (query.isEmpty) {
       state.searchResults = [];
+      state.isSearching = false;
       onUpdate();
       return;
     }
 
+    // Indicar que se está buscando
     state.isSearching = true;
     onUpdate();
 
-    final results = await NominatimService.searchPlace(query);
+    // Esperar 500ms antes de buscar (debouncing)
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      _performSearch(query);
+    });
+  }
+  
+  /// Ejecutar la búsqueda real
+  Future<void> _performSearch(String query) async {
+    // Evitar búsquedas duplicadas
+    if (_lastQuery == query) {
+      state.isSearching = false;
+      onUpdate();
+      return;
+    }
+    
+    // Respetar el límite de tasa de Nominatim (1 request/segundo)
+    final timeSinceLastRequest = DateTime.now().difference(_lastRequestTime);
+    if (timeSinceLastRequest.inMilliseconds < 1000) {
+      await Future.delayed(Duration(
+        milliseconds: 1000 - timeSinceLastRequest.inMilliseconds,
+      ));
+    }
+    
+    _lastQuery = query;
+    _lastRequestTime = DateTime.now();
 
-    state.searchResults = results;
-    state.isSearching = false;
-    onUpdate();
+    try {
+      final results = await NominatimService.searchPlace(query);
+      
+      // Solo actualizar si todavía es la misma búsqueda
+      if (_lastQuery == query) {
+        state.searchResults = results;
+        state.isSearching = false;
+        onUpdate();
+      }
+    } catch (e) {
+      // Manejar error
+      if (_lastQuery == query) {
+        state.searchResults = [];
+        state.isSearching = false;
+        onUpdate();
+      }
+    }
   }
 
   /// Seleccionar un lugar de los resultados
@@ -52,7 +100,15 @@ class SearchHandler {
 
   /// Limpiar resultados de búsqueda
   void clearSearchResults() {
+    _debounceTimer?.cancel();
+    _lastQuery = '';
     state.searchResults = [];
+    state.isSearching = false;
     onUpdate();
+  }
+  
+  /// Liberar recursos
+  void dispose() {
+    _debounceTimer?.cancel();
   }
 }

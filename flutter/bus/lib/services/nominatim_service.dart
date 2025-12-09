@@ -34,17 +34,34 @@ class NominatimService {
         },
       );
       
-      final response = await http.get(uri, headers: _headers);
+      final response = await http.get(uri, headers: _headers)
+          .timeout(const Duration(seconds: 10));
       
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
-        return data.map((json) => Place.fromNominatimJson(json)).toList();
+        
+        // Filtrar resultados válidos
+        final places = <Place>[];
+        for (var json in data) {
+          try {
+            final place = Place.fromNominatimJson(json);
+            places.add(place);
+          } catch (e) {
+            // Ignorar lugares con datos inválidos
+            continue;
+          }
+        }
+        
+        return places;
+      } else if (response.statusCode == 429) {
+        // Too Many Requests - esperar y reintentar
+        throw Exception('Demasiadas solicitudes. Intenta de nuevo en un momento.');
       }
       
       return [];
     } catch (e) {
       // Error en búsqueda Nominatim
-      return [];
+      rethrow;
     }
   }
 

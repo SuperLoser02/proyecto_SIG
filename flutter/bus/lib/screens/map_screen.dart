@@ -69,6 +69,7 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Future<void> _showBusRouteOptions(Place destination) async {
+    // Mostrar diálogo de confirmación para búsqueda por texto
     final shouldSearch = await MapDialogs.showBusRouteOptions(
       context,
       destination,
@@ -213,6 +214,7 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   void dispose() {
+    _searchHandler.dispose();
     _state.dispose();
     super.dispose();
   }
