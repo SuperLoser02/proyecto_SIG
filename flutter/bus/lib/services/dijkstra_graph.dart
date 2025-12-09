@@ -89,24 +89,69 @@ class DijkstraResult {
   }
 }
 
-/// Cola de prioridad simple para Dijkstra
+/// Cola de prioridad eficiente con heap binario para Dijkstra
 class PriorityQueue<T> {
-  final List<T> _items = [];
+  final List<T> _heap = [];
   final Comparator<T> _comparator;
 
   PriorityQueue(this._comparator);
 
   void add(T item) {
-    _items.add(item);
-    _items.sort(_comparator);
+    _heap.add(item);
+    _bubbleUp(_heap.length - 1);
   }
 
   T removeFirst() {
-    return _items.removeAt(0);
+    if (_heap.isEmpty) throw StateError('Queue is empty');
+    final first = _heap[0];
+    final last = _heap.removeLast();
+    if (_heap.isNotEmpty) {
+      _heap[0] = last;
+      _bubbleDown(0);
+    }
+    return first;
   }
 
-  bool get isNotEmpty => _items.isNotEmpty;
-  bool get isEmpty => _items.isEmpty;
+  void _bubbleUp(int index) {
+    while (index > 0) {
+      final parentIndex = (index - 1) >> 1;
+      if (_comparator(_heap[index], _heap[parentIndex]) >= 0) break;
+      _swap(index, parentIndex);
+      index = parentIndex;
+    }
+  }
+
+  void _bubbleDown(int index) {
+    final length = _heap.length;
+    while (true) {
+      final leftChild = (index << 1) + 1;
+      final rightChild = leftChild + 1;
+      var smallest = index;
+
+      if (leftChild < length &&
+          _comparator(_heap[leftChild], _heap[smallest]) < 0) {
+        smallest = leftChild;
+      }
+      if (rightChild < length &&
+          _comparator(_heap[rightChild], _heap[smallest]) < 0) {
+        smallest = rightChild;
+      }
+      if (smallest == index) break;
+
+      _swap(index, smallest);
+      index = smallest;
+    }
+  }
+
+  void _swap(int i, int j) {
+    final temp = _heap[i];
+    _heap[i] = _heap[j];
+    _heap[j] = temp;
+  }
+
+  bool get isNotEmpty => _heap.isNotEmpty;
+  bool get isEmpty => _heap.isEmpty;
+  int get length => _heap.length;
 }
 
 /// Algoritmo de Dijkstra para encontrar caminos más cortos

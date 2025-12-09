@@ -43,34 +43,32 @@ class RoutePathfinder {
     final graph = _buildRouteGraph(distance);
 
     // Encontrar nodos más cercanos al origen y destino
-    final startNodes = _findNearestNodes(from, distance, maxDistance: 2000);
-    final endNodes = _findNearestNodes(to, distance, maxDistance: 2000);
+    final startNodes = _findNearestNodes(from, distance, maxDistance: 1500);
+    final endNodes = _findNearestNodes(to, distance, maxDistance: 1500);
 
     if (startNodes.isEmpty || endNodes.isEmpty) {
       return [];
     }
 
-    // Ejecutar Dijkstra desde cada nodo de inicio y recolectar TODAS las rutas
+    // OPTIMIZACIÓN: Ejecutar Dijkstra UNA SOLA VEZ desde el mejor nodo de inicio
     final List<BusRouteRecommendation> allRecommendations = [];
+    final startNode = startNodes.first;
+    final dijkstraResult = DijkstraAlgorithm.run(graph, startNode, endNodes);
 
-    for (final startNode in startNodes) {
-      final dijkstraResult = DijkstraAlgorithm.run(graph, startNode, endNodes);
+    // Probar los primeros 5 nodos de destino más cercanos
+    for (final endNode in endNodes.take(10)) {
+      final path = dijkstraResult.getPath(endNode);
+      if (path.isEmpty || path.length < 2) continue;
 
-      // Probar TODOS los nodos de destino
-      for (final endNode in endNodes) {
-        final path = dijkstraResult.getPath(endNode);
-        if (path.isEmpty || path.length < 2) continue;
-
-        // Convertir el camino en recomendaciones
-        final recommendations = _pathToRecommendations(
-          path,
-          dijkstraResult,
-          from,
-          to,
-          distance,
-        );
-        allRecommendations.addAll(recommendations);
-      }
+      // Convertir el camino en recomendaciones
+      final recommendations = _pathToRecommendations(
+        path,
+        dijkstraResult,
+        from,
+        to,
+        distance,
+      );
+      allRecommendations.addAll(recommendations);
     }
 
     // Eliminar duplicados
@@ -153,24 +151,18 @@ class RoutePathfinder {
     Distance distance,
   ) {
     final allNodes = graph.keys.toList();
-    const maxTransferDistance = 500.0; // metros
+    const maxTransferDistance = 400.0; // metros (reducido para menos conexiones)
 
     // Usar índice espacial simple para evitar O(n²)
-    // Agrupar nodos por cuadrícula
+    // Agrupar nodos por cuadrícula - SOLO EN SU CELDA
     final grid = <String, List<GraphNode>>{};
     const gridSize = 0.005; // ~500m en grados
 
     for (final node in allNodes) {
       final gridX = (node.location.latitude / gridSize).floor();
       final gridY = (node.location.longitude / gridSize).floor();
-      
-      // Agregar a la celda y celdas vecinas
-      for (int dx = -1; dx <= 1; dx++) {
-        for (int dy = -1; dy <= 1; dy++) {
-          final key = '${gridX + dx},${gridY + dy}';
-          grid.putIfAbsent(key, () => []).add(node);
-        }
-      }
+      final key = '$gridX,$gridY';
+      grid.putIfAbsent(key, () => []).add(node);
     }
 
     final processed = <String>{};
@@ -180,59 +172,65 @@ class RoutePathfinder {
 
       final gridX = (node1.location.latitude / gridSize).floor();
       final gridY = (node1.location.longitude / gridSize).floor();
-      final key = '$gridX,$gridY';
       
-      final nearbyNodes = grid[key] ?? [];
+      // Buscar solo en celda actual y celdas adyacentes
+      for (int dx = -1; dx <= 1; dx++) {
+        for (int dy = -1; dy <= 1; dy++) {
+          final key = '${gridX + dx},${gridY + dy}';
+          final nearbyNodes = grid[key] ?? [];
 
-      for (final node2 in nearbyNodes) {
-        if (node2.routeId == null || node1.routeId == node2.routeId) continue;
-        
-        // Evitar duplicados
-        final pairKey = '${node1.hashCode}-${node2.hashCode}';
-        if (processed.contains(pairKey)) continue;
-        processed.add(pairKey);
+          for (final node2 in nearbyNodes) {
+            if (node2.routeId == null || node1.routeId == node2.routeId) continue;
+            
+            // Evitar duplicados
+            final pairKey = '${node1.hashCode}-${node2.hashCode}';
+            if (processed.contains(pairKey)) continue;
+            processed.add(pairKey);
 
-        final dist = distance.as(
-          LengthUnit.Meter,
-          node1.location,
-          node2.location,
-        );
+            final dist = distance.as(
+              LengthUnit.Meter,
+              node1.location,
+              node2.location,
+            );
 
-        if (dist <= maxTransferDistance) {
-          graph.putIfAbsent(node1, () => []);
-          graph.putIfAbsent(node2, () => []);
+            if (dist <= maxTransferDistance) {
+              graph.putIfAbsent(node1, () => []);
+              graph.putIfAbsent(node2, () => []);
 
-          graph[node1]!.add(
-            GraphEdge(
-              to: node2,
-              cost: dist * 1.5 + 300,
-              type: EdgeType.transfer,
-              walkDistance: dist,
-            ),
-          );
+              graph[node1]!.add(
+                GraphEdge(
+                  to: node2,
+                  cost: dist * 1.5 + 300,
+                  type: EdgeType.transfer,
+                  walkDistance: dist,
+                ),
+              );
 
-          graph[node2]!.add(
-            GraphEdge(
-              to: node1,
-              cost: dist * 1.5 + 300,
-              type: EdgeType.transfer,
-              walkDistance: dist,
-            ),
-          );
+              graph[node2]!.add(
+                GraphEdge(
+                  to: node1,
+                  cost: dist * 1.5 + 300,
+                  type: EdgeType.transfer,
+                  walkDistance: dist,
+                ),
+              );
+            }
+          }
         }
       }
     }
   }
 
   /// Encontrar nodos más cercanos a una ubicación
-  /// Reducir a 10 nodos para mejor rendimiento
+  /// Optimizado: reducir a 10 nodos para mejor rendimiento
   List<GraphNode> _findNearestNodes(
     LatLng location,
     Distance distance, {
-    double maxDistance = 2000,
+    double maxDistance = 1500,
   }) {
     final List<_NodeDistance> candidates = [];
 
+    // OPTIMIZACIÓN: Salir temprano si ya tenemos suficientes candidatos cercanos
     for (final route in _allRoutes) {
       for (int i = 0; i < route.points.length; i++) {
         final point = route.points[i];
@@ -253,7 +251,7 @@ class RoutePathfinder {
       }
     }
 
-    // Ordenar por distancia y tomar los 10 más cercanos
+    // Ordenar por distancia y tomar los 5 más cercanos
     candidates.sort((a, b) => a.distance.compareTo(b.distance));
     return candidates.take(10).map((nd) => nd.node).toList();
   }
