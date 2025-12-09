@@ -147,20 +147,50 @@ class RoutePathfinder {
   }
 
   /// Agregar aristas de transbordo entre puntos cercanos de diferentes rutas
+  /// OPTIMIZADO: Solo conectar puntos cercanos usando índice espacial
   void _addTransferEdges(
     Map<GraphNode, List<GraphEdge>> graph,
     Distance distance,
   ) {
     final allNodes = graph.keys.toList();
+    const maxTransferDistance = 500.0; // metros
 
-    for (int i = 0; i < allNodes.length; i++) {
-      for (int j = i + 1; j < allNodes.length; j++) {
-        final node1 = allNodes[i];
-        final node2 = allNodes[j];
+    // Usar índice espacial simple para evitar O(n²)
+    // Agrupar nodos por cuadrícula
+    final grid = <String, List<GraphNode>>{};
+    const gridSize = 0.005; // ~500m en grados
 
-        // Solo conectar nodos de rutas diferentes
-        if (node1.routeId == null || node2.routeId == null) continue;
-        if (node1.routeId == node2.routeId) continue;
+    for (final node in allNodes) {
+      final gridX = (node.location.latitude / gridSize).floor();
+      final gridY = (node.location.longitude / gridSize).floor();
+      
+      // Agregar a la celda y celdas vecinas
+      for (int dx = -1; dx <= 1; dx++) {
+        for (int dy = -1; dy <= 1; dy++) {
+          final key = '${gridX + dx},${gridY + dy}';
+          grid.putIfAbsent(key, () => []).add(node);
+        }
+      }
+    }
+
+    final processed = <String>{};
+
+    for (final node1 in allNodes) {
+      if (node1.routeId == null) continue;
+
+      final gridX = (node1.location.latitude / gridSize).floor();
+      final gridY = (node1.location.longitude / gridSize).floor();
+      final key = '$gridX,$gridY';
+      
+      final nearbyNodes = grid[key] ?? [];
+
+      for (final node2 in nearbyNodes) {
+        if (node2.routeId == null || node1.routeId == node2.routeId) continue;
+        
+        // Evitar duplicados
+        final pairKey = '${node1.hashCode}-${node2.hashCode}';
+        if (processed.contains(pairKey)) continue;
+        processed.add(pairKey);
 
         final dist = distance.as(
           LengthUnit.Meter,
@@ -168,18 +198,14 @@ class RoutePathfinder {
           node2.location,
         );
 
-        // Máximo 500m de caminata para transbordo
-        if (dist <= 500) {
-          // Asegurar que ambos nodos tengan lista de aristas
+        if (dist <= maxTransferDistance) {
           graph.putIfAbsent(node1, () => []);
           graph.putIfAbsent(node2, () => []);
 
           graph[node1]!.add(
             GraphEdge(
               to: node2,
-              cost:
-                  dist * 1.5 +
-                  300, // Penalización por caminar + costo fijo de transbordo
+              cost: dist * 1.5 + 300,
               type: EdgeType.transfer,
               walkDistance: dist,
             ),
@@ -199,7 +225,7 @@ class RoutePathfinder {
   }
 
   /// Encontrar nodos más cercanos a una ubicación
-  /// Incluye más nodos para explorar más rutas posibles
+  /// Reducir a 10 nodos para mejor rendimiento
   List<GraphNode> _findNearestNodes(
     LatLng location,
     Distance distance, {
@@ -227,9 +253,9 @@ class RoutePathfinder {
       }
     }
 
-    // Ordenar por distancia y tomar los 20 más cercanos para más opciones
+    // Ordenar por distancia y tomar los 10 más cercanos
     candidates.sort((a, b) => a.distance.compareTo(b.distance));
-    return candidates.take(20).map((nd) => nd.node).toList();
+    return candidates.take(10).map((nd) => nd.node).toList();
   }
 
   /// Convertir camino de Dijkstra a recomendaciones

@@ -27,7 +27,9 @@ class BusRouteHandler {
 
     try {
       await BusLineService.instance.loadData();
-      final recommendations = BusLineService.instance.findBestRoutes(
+      
+      // Ejecutar la búsqueda en un compute isolate para no bloquear la UI
+      final recommendations = await BusLineService.instance.findBestRoutes(
         from: state.currentLocation,
         to: destination,
         maxResults: 10,

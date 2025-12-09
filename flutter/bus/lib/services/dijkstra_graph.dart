@@ -112,7 +112,7 @@ class PriorityQueue<T> {
 /// Algoritmo de Dijkstra para encontrar caminos más cortos
 class DijkstraAlgorithm {
   /// Ejecutar Dijkstra desde un nodo de inicio hacia nodos objetivo
-  /// Explora TODO el grafo para encontrar todas las rutas posibles
+  /// OPTIMIZADO: Se detiene cuando encuentra todos los targets
   static DijkstraResult run(
     Map<GraphNode, List<GraphEdge>> graph,
     GraphNode start,
@@ -122,6 +122,8 @@ class DijkstraAlgorithm {
     final previous = <GraphNode, PathInfo>{};
     final pq = PriorityQueue<PQEntry>((a, b) => a.cost.compareTo(b.cost));
     final visited = <GraphNode>{};
+    final targetSet = Set<GraphNode>.from(targets);
+    final foundTargets = <GraphNode>{};
 
     // Inicializar distancias
     for (final node in graph.keys) {
@@ -130,13 +132,21 @@ class DijkstraAlgorithm {
     distances[start] = 0;
     pq.add(PQEntry(node: start, cost: 0));
 
-    // NO detenerse al encontrar targets - explorar TODO el grafo
-    // para encontrar todas las rutas posibles
     while (pq.isNotEmpty) {
       final current = pq.removeFirst();
 
       if (visited.contains(current.node)) continue;
       visited.add(current.node);
+
+      // Si encontramos un target, marcarlo
+      if (targetSet.contains(current.node)) {
+        foundTargets.add(current.node);
+        
+        // Si encontramos todos los targets, podemos terminar
+        if (foundTargets.length >= targets.length) {
+          break;
+        }
+      }
 
       final neighbors = graph[current.node] ?? [];
 

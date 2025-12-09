@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 import '../models/bus_line.dart';
 import '../models/bus_route_recommendation.dart';
@@ -135,12 +136,33 @@ class BusLineService {
   }
 
   /// Encontrar las mejores opciones usando algoritmo de Dijkstra
-  List<BusRouteRecommendation> findBestRoutes({
+  Future<List<BusRouteRecommendation>> findBestRoutes({
     required LatLng from,
     required LatLng to,
     int maxResults = 5,
-  }) {
-    final pathfinder = RoutePathfinder(getAllRoutes());
+  }) async {
+    // Ejecutar en isolate para no bloquear la UI
+    return compute(_findBestRoutesIsolate, {
+      'routes': getAllRoutes(),
+      'from': {'lat': from.latitude, 'lng': from.longitude},
+      'to': {'lat': to.latitude, 'lng': to.longitude},
+      'maxResults': maxResults,
+    });
+  }
+
+  /// Función estática para ejecutar en isolate
+  static List<BusRouteRecommendation> _findBestRoutesIsolate(
+    Map<String, dynamic> params,
+  ) {
+    final routes = params['routes'] as List<BusRoute>;
+    final fromMap = params['from'] as Map<String, dynamic>;
+    final toMap = params['to'] as Map<String, dynamic>;
+    final maxResults = params['maxResults'] as int;
+
+    final from = LatLng(fromMap['lat'] as double, fromMap['lng'] as double);
+    final to = LatLng(toMap['lat'] as double, toMap['lng'] as double);
+
+    final pathfinder = RoutePathfinder(routes);
     return pathfinder.findBestRoutes(
       from: from,
       to: to,
@@ -149,11 +171,11 @@ class BusLineService {
   }
 
   /// MÉTODO LEGACY - Mantener por compatibilidad
-  BusRouteRecommendation? findBestRoute({
+  Future<BusRouteRecommendation?> findBestRoute({
     required LatLng from,
     required LatLng to,
-  }) {
-    final routes = findBestRoutes(from: from, to: to, maxResults: 1);
+  }) async {
+    final routes = await findBestRoutes(from: from, to: to, maxResults: 1);
     return routes.isNotEmpty ? routes.first : null;
   }
 }
