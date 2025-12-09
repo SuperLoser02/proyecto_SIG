@@ -31,10 +31,11 @@ class RoutePathfinder {
   RoutePathfinder(this._allRoutes);
 
   /// Encontrar las mejores rutas desde un origen a un destino
+  /// Devuelve TODAS las rutas encontradas, ordenadas de la más cercana a la más lejana
   List<BusRouteRecommendation> findBestRoutes({
     required LatLng from,
     required LatLng to,
-    int maxResults = 5,
+    int maxResults = 10,
   }) {
     final Distance distance = const Distance();
 
@@ -43,21 +44,22 @@ class RoutePathfinder {
 
     // Encontrar nodos más cercanos al origen y destino
     final startNodes = _findNearestNodes(from, distance, maxDistance: 2000);
-    final endNodes = _findNearestNodes(to, distance, maxDistance: 1500);
+    final endNodes = _findNearestNodes(to, distance, maxDistance: 2000);
 
     if (startNodes.isEmpty || endNodes.isEmpty) {
       return [];
     }
 
-    // Ejecutar Dijkstra desde cada nodo de inicio y recolectar rutas
+    // Ejecutar Dijkstra desde cada nodo de inicio y recolectar TODAS las rutas
     final List<BusRouteRecommendation> allRecommendations = [];
 
     for (final startNode in startNodes) {
       final dijkstraResult = DijkstraAlgorithm.run(graph, startNode, endNodes);
 
+      // Probar TODOS los nodos de destino
       for (final endNode in endNodes) {
         final path = dijkstraResult.getPath(endNode);
-        if (path.isEmpty) continue;
+        if (path.isEmpty || path.length < 2) continue;
 
         // Convertir el camino en recomendaciones
         final recommendations = _pathToRecommendations(
@@ -71,9 +73,23 @@ class RoutePathfinder {
       }
     }
 
-    // Eliminar duplicados y ordenar por score
+    // Eliminar duplicados
     final uniqueRecommendations = _removeDuplicates(allRecommendations);
-    uniqueRecommendations.sort((a, b) => a.totalScore.compareTo(b.totalScore));
+    
+    // Ordenar por distancia total (más cercana primero)
+    uniqueRecommendations.sort((a, b) {
+      // Primero: menor distancia de caminata al inicio
+      final walkDiff = a.walkToStartDistance.compareTo(b.walkToStartDistance);
+      if (walkDiff != 0) return walkDiff;
+      
+      // Segundo: sin transbordo es mejor
+      if (a.isTransfer != b.isTransfer) {
+        return a.isTransfer ? 1 : -1;
+      }
+      
+      // Tercero: menor distancia total
+      return a.totalDistance.compareTo(b.totalDistance);
+    });
 
     return uniqueRecommendations.take(maxResults).toList();
   }
@@ -183,6 +199,7 @@ class RoutePathfinder {
   }
 
   /// Encontrar nodos más cercanos a una ubicación
+  /// Incluye más nodos para explorar más rutas posibles
   List<GraphNode> _findNearestNodes(
     LatLng location,
     Distance distance, {
@@ -210,9 +227,9 @@ class RoutePathfinder {
       }
     }
 
-    // Ordenar por distancia y tomar los 10 más cercanos
+    // Ordenar por distancia y tomar los 20 más cercanos para más opciones
     candidates.sort((a, b) => a.distance.compareTo(b.distance));
-    return candidates.take(10).map((nd) => nd.node).toList();
+    return candidates.take(20).map((nd) => nd.node).toList();
   }
 
   /// Convertir camino de Dijkstra a recomendaciones

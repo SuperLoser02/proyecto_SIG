@@ -255,6 +255,7 @@ class MapDialogs {
                       context,
                       rec,
                       onRouteSelected,
+                      index + 1, // Número de opción
                     );
                   },
                 ),
@@ -271,6 +272,7 @@ class MapDialogs {
     BuildContext context,
     BusRouteRecommendation rec,
     Function(BusRouteRecommendation) onTap,
+    int optionNumber,
   ) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -285,38 +287,61 @@ class MapDialogs {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Etiqueta de transbordo si aplica
-              if (rec.isTransfer)
-                Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade100,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.swap_horiz,
-                        size: 16,
-                        color: Colors.orange.shade800,
+              // Número de opción y etiqueta de transbordo
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'Opción $optionNumber',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue.shade800,
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Con Transbordo',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.orange.shade800,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
+                  if (rec.isTransfer)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.swap_horiz,
+                            size: 16,
+                            color: Colors.orange.shade800,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Con Transbordo',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange.shade800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
               // Líneas de micro
               Row(
                 children: [

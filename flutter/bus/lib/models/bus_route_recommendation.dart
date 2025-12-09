@@ -48,8 +48,14 @@ class BusRouteRecommendation {
     return walkPenalty + (busDistance * 0.1) + transferPenalty;
   }
 
+  /// Distancia total incluyendo caminata y distancia en micro
   double get totalDistance =>
-      walkToStartDistance + busDistance + walkFromEndDistance;
+      walkToStartDistance + busDistance + walkFromEndDistance +
+      (transferWalkDistance ?? 0);
+      
+  /// Distancia total de caminata (incluye transbordo si existe)
+  double get totalWalkDistance =>
+      walkToStartDistance + walkFromEndDistance + (transferWalkDistance ?? 0);
 
   String get formattedWalkToStart {
     if (walkToStartDistance < 1000) {
