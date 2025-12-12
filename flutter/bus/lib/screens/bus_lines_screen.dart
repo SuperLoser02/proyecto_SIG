@@ -73,13 +73,13 @@ class _BusLinesScreenState extends State<BusLinesScreen> {
                       ),
                       child: ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: line.color,
-                          child: Text(
-                            line.displayName.replaceAll('L', ''),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          backgroundColor: Colors.transparent,
+                          child: Image.asset(
+                            'assets/imagenes_lineas/img_${line.displayName}.png',
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Icon(Icons.image_not_supported, color: Colors.red);
+                            },
                           ),
                         ),
                         title: Text(
