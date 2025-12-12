@@ -22,15 +22,15 @@ class BusRouteHandler {
   });
 
   /// Buscar rutas de micro hacia un destino
-  Future<void> findBusRouteTo(LatLng destination) async {
+  Future<void> findBusRouteTo(LatLng origin, LatLng destination) async {
     MapDialogs.showLoadingDialog(context);
 
     try {
       await BusLineService.instance.loadData();
-      
+
       // Ejecutar la búsqueda en un compute isolate para no bloquear la UI
       final recommendations = await BusLineService.instance.findBestRoutes(
-        from: state.currentLocation,
+        from: origin,
         to: destination,
         maxResults: 10,
       );
@@ -39,46 +39,40 @@ class BusRouteHandler {
       Navigator.pop(context);
 
       if (recommendations.isEmpty) {
-        MapDialogs.showNoRoutesFound(
-          context,
-          state.currentLocation,
-          destination,
-        );
+        MapDialogs.showNoRoutesFound(context, origin, destination);
         return;
       }
 
       MapDialogs.showBusRouteRecommendations(
         context,
         recommendations: recommendations,
-        currentLocation: state.currentLocation,
+        currentLocation: origin,
         destination: destination,
-        onRouteSelected: (rec) => showRecommendedRoute(rec, destination),
+        onRouteSelected: (rec) =>
+            showRecommendedRoute(rec, origin, destination),
       );
     } catch (e) {
       if (!context.mounted) return;
       Navigator.pop(context);
-      MapDialogs.showRouteError(
-        context,
-        e.toString(),
-        state.currentLocation,
-      );
+      MapDialogs.showRouteError(context, e.toString(), origin);
     }
   }
 
   /// Mostrar ruta recomendada en el mapa
   void showRecommendedRoute(
     BusRouteRecommendation recommendation,
+    LatLng origin,
     LatLng destination,
   ) {
     state.currentRoute = null;
     state.polylines = RouteVisualizer.recommendationPolylines(
-      userLocation: state.currentLocation,
+      userLocation: origin,
       destination: destination,
       recommendation: recommendation,
     );
 
     state.markers = [
-      MapMarkers.userLocationWithLabel(state.currentLocation),
+      MapMarkers.userLocationWithLabel(origin),
       MapMarkers.busStartMarker(
         recommendation.startPoint.location,
         recommendation.route.line,
@@ -109,7 +103,7 @@ class BusRouteHandler {
     ];
 
     final allPoints = [
-      state.currentLocation,
+      origin,
       ...recommendation.routeSegment,
       if (recommendation.isTransfer &&
           recommendation.transferRouteSegment != null)

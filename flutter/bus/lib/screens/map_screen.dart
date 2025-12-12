@@ -58,7 +58,7 @@ class _MapScreenState extends State<MapScreen> {
       state: _state,
       onUpdate: () => setState(() {}),
       context: context,
-      onDestinationSelected: _busRouteHandler.findBusRouteTo,
+      onRouteSearch: _busRouteHandler.findBusRouteTo,
     );
 
     _poiHandler = POIHandler(
@@ -76,7 +76,10 @@ class _MapScreenState extends State<MapScreen> {
     );
 
     if (shouldSearch == true && mounted) {
-      _busRouteHandler.findBusRouteTo(destination.location);
+      _busRouteHandler.findBusRouteTo(
+        _state.effectiveOrigin,
+        destination.location,
+      );
     }
   }
 
@@ -110,7 +113,8 @@ class _MapScreenState extends State<MapScreen> {
           _buildSearchSection(),
 
           // Banner de modo de selección
-          if (_state.isSelectingDestination) _buildSelectionBanner(),
+          if (_state.isSelectingOrigin || _state.isSelectingDestination)
+            _buildSelectionBanner(),
 
           // Botones flotantes
           _buildActionButtons(),
@@ -135,8 +139,8 @@ class _MapScreenState extends State<MapScreen> {
         ),
         onTap: (_, point) {
           _searchHandler.clearSearchResults();
-          if (_state.isSelectingDestination) {
-            _destinationSelector.selectDestinationOnMap(point);
+          if (_state.isSelectingOrigin || _state.isSelectingDestination) {
+            _destinationSelector.selectLocationOnMap(point);
           }
         },
       ),
@@ -188,8 +192,10 @@ class _MapScreenState extends State<MapScreen> {
       left: 16,
       right: 16,
       child: widgets.SelectionModeBanner(
+        isSelectingOrigin: _state.isSelectingOrigin,
         onClose: () {
           setState(() {
+            _state.isSelectingOrigin = false;
             _state.isSelectingDestination = false;
           });
         },
@@ -202,9 +208,12 @@ class _MapScreenState extends State<MapScreen> {
       right: 16,
       bottom: 100,
       child: widgets.MapActionButtons(
+        isSelectingOrigin: _state.isSelectingOrigin,
         isSelectingDestination: _state.isSelectingDestination,
         isLoadingLocation: _state.isLoadingLocation,
-        onToggleSelection: _destinationSelector.toggleSelectionMode,
+        onToggleOriginSelection: _destinationSelector.toggleOriginSelection,
+        onToggleDestinationSelection:
+            _destinationSelector.toggleDestinationSelection,
         onShowBusLines: _showBusLines,
         onGetLocation: _locationHandler.getCurrentLocation,
         onShowNearby: _showCategoryDialog,

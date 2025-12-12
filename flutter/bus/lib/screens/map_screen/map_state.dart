@@ -17,9 +17,14 @@ class MapState {
 
   bool isSearching = false;
   bool isLoadingLocation = false;
+  bool isSelectingOrigin = false;
   bool isSelectingDestination = false;
+  LatLng? selectedOrigin;
   LatLng? selectedDestination;
   String selectedCategory = 'amenity=restaurant';
+
+  /// Obtener el punto de origen efectivo (seleccionado o ubicación actual)
+  LatLng get effectiveOrigin => selectedOrigin ?? currentLocation;
 
   void dispose() {
     searchController.dispose();

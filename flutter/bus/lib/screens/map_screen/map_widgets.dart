@@ -35,11 +35,8 @@ class SearchBar extends StatelessWidget {
                   ),
                 )
               : controller.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: onClear,
-                    )
-                  : null,
+              ? IconButton(icon: const Icon(Icons.clear), onPressed: onClear)
+              : null,
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
@@ -100,20 +97,33 @@ class SearchResults extends StatelessWidget {
 
 /// Banner de modo de selección activo
 class SelectionModeBanner extends StatelessWidget {
+  final bool isSelectingOrigin;
   final VoidCallback onClose;
 
-  const SelectionModeBanner({super.key, required this.onClose});
+  const SelectionModeBanner({
+    super.key,
+    required this.isSelectingOrigin,
+    required this.onClose,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final bannerColor = isSelectingOrigin ? Colors.green : Colors.blue;
+    final title = isSelectingOrigin
+        ? 'Seleccionar Origen'
+        : 'Seleccionar Destino';
+    final description = isSelectingOrigin
+        ? 'Toca un punto del mapa para establecer tu punto de origen'
+        : 'Toca un punto del mapa para establecer tu destino';
+
     return Card(
-      color: Colors.blue.shade50,
+      color: bannerColor.shade50,
       elevation: 4,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            Icon(Icons.touch_app, color: Colors.blue.shade700, size: 28),
+            Icon(Icons.touch_app, color: bannerColor.shade700, size: 28),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -121,26 +131,23 @@ class SelectionModeBanner extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Modo de Selección Activo',
+                    title,
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
-                      color: Colors.blue.shade900,
+                      color: bannerColor.shade900,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Toca un punto del mapa para seleccionar tu destino',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.blue.shade700,
-                    ),
+                    description,
+                    style: TextStyle(fontSize: 13, color: bannerColor.shade700),
                   ),
                 ],
               ),
             ),
             IconButton(
-              icon: Icon(Icons.close, color: Colors.blue.shade700),
+              icon: Icon(Icons.close, color: bannerColor.shade700),
               onPressed: onClose,
             ),
           ],
@@ -152,18 +159,22 @@ class SelectionModeBanner extends StatelessWidget {
 
 /// Botones flotantes de acción
 class MapActionButtons extends StatelessWidget {
+  final bool isSelectingOrigin;
   final bool isSelectingDestination;
   final bool isLoadingLocation;
-  final VoidCallback onToggleSelection;
+  final VoidCallback onToggleOriginSelection;
+  final VoidCallback onToggleDestinationSelection;
   final VoidCallback onShowBusLines;
   final VoidCallback onGetLocation;
   final VoidCallback onShowNearby;
 
   const MapActionButtons({
     super.key,
+    required this.isSelectingOrigin,
     required this.isSelectingDestination,
     required this.isLoadingLocation,
-    required this.onToggleSelection,
+    required this.onToggleOriginSelection,
+    required this.onToggleDestinationSelection,
     required this.onShowBusLines,
     required this.onGetLocation,
     required this.onShowNearby,
@@ -174,15 +185,21 @@ class MapActionButtons extends StatelessWidget {
     return Column(
       children: [
         FloatingActionButton.extended(
+          heroTag: 'select_origin',
+          backgroundColor: isSelectingOrigin ? Colors.orange : Colors.green,
+          onPressed: onToggleOriginSelection,
+          icon: Icon(isSelectingOrigin ? Icons.touch_app : Icons.trip_origin),
+          label: Text(isSelectingOrigin ? 'Seleccionando...' : 'Origen'),
+        ),
+        const SizedBox(height: 8),
+        FloatingActionButton.extended(
           heroTag: 'select_destination',
-          backgroundColor: isSelectingDestination ? Colors.green : Colors.blue,
-          onPressed: onToggleSelection,
+          backgroundColor: isSelectingDestination ? Colors.orange : Colors.blue,
+          onPressed: onToggleDestinationSelection,
           icon: Icon(
             isSelectingDestination ? Icons.touch_app : Icons.add_location,
           ),
-          label: Text(
-            isSelectingDestination ? 'Seleccionando...' : 'Destino',
-          ),
+          label: Text(isSelectingDestination ? 'Seleccionando...' : 'Destino'),
         ),
         const SizedBox(height: 8),
         FloatingActionButton(
