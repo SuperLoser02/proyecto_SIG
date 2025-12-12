@@ -28,6 +28,8 @@ class _RouteSegment {
 class RoutePathfinder {
   final List<BusRoute> _allRoutes;
 
+  final int cNodos = 20; 
+
   RoutePathfinder(this._allRoutes);
 
   /// Encontrar las mejores rutas desde un origen a un destino
@@ -56,7 +58,7 @@ class RoutePathfinder {
     final dijkstraResult = DijkstraAlgorithm.run(graph, startNode, endNodes);
 
     // Probar los primeros 5 nodos de destino más cercanos
-    for (final endNode in endNodes.take(10)) {
+    for (final endNode in endNodes.take(cNodos)) {
       final path = dijkstraResult.getPath(endNode);
       if (path.isEmpty || path.length < 2) continue;
 
@@ -253,7 +255,7 @@ class RoutePathfinder {
 
     // Ordenar por distancia y tomar los 5 más cercanos
     candidates.sort((a, b) => a.distance.compareTo(b.distance));
-    return candidates.take(10).map((nd) => nd.node).toList();
+    return candidates.take(cNodos).map((nd) => nd.node).toList();
   }
 
   /// Convertir camino de Dijkstra a recomendaciones
